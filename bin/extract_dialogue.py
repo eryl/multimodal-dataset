@@ -5,6 +5,7 @@ import os
 import os.path
 import re
 import glob
+import csv
 import srt
 import numpy as np
 import ffmpeg
@@ -14,6 +15,7 @@ import h5py
 import imageio
 import itertools
 import html.parser
+import multiprocessing
 
 
 class SubtitleParser(html.parser.HTMLParser):
@@ -34,29 +36,31 @@ class SubtitleParser(html.parser.HTMLParser):
         self.data = None
         self.color = None
 
+class VideoConverter(multiprocessing.Process):
+    pass
 
 def main():
     parser = argparse.ArgumentParser(description="Script for extracrting video snippets with dialogue")
     parser.add_argument('store', help="Path to h5py to store data to")
-    parser.add_argument('videos', nargs='+', help="Videos or directories to process")
+    parser.add_argument('index_file', help="CSV containing an index of video files to process")
+    parser.add_argument('--nprocesses', help="Number of processes to use for creating datasets", type=int, default=1)
     args = parser.parse_args()
-    videos = []
-    not_processed = set(args.videos)
-    video_pattern = r'.*_([a-z0-9]+)_[a-z]+\.mp4'
-    while not_processed:
-        video = not_processed.pop()
-        if os.path.isdir(video):
-            not_processed.update(os.listdir(video))
-        else:
-            m = re.match(video_pattern, video)
-            if m:
-                videos.append((m.group(1), video))
-    for pid, video_name in videos:
-        subtitles, = glob.glob(os.path.join(os.path.dirname(video_name), '*{}*.srt'.format(pid)))
-        extract_dialogue(args.store, video_name, subtitles)
+    with open(args.index_file) as fp:
+        csv_reader = csv.DictReader(fp)
+        videos = list(csv_reader)
+
+    if args.nprocesses > 1:
+        video_queue = multiprocessing.Queue(args.nprocesses*2)
+        processes = [VideoConverter(video_queue) for i in range(args.nprocesses)]
+
+    else:
+        for video in videos:
+            video_file = video['mp4']
+            subtitles_file = video['srt']
+            uncompress_video(args.store, video_file, subtitles_file)
 
 
-def extract_dialogue(store_path, video_name, subtitle_name, chunksize=2**24):
+def uncompress_video(store_path, video_name, subtitle_name, chunksize=2**24):
     with h5py.File(store_path, 'w') as store:
         movie_group = store.create_group(video_name)
 
