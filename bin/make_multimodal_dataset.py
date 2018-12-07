@@ -121,55 +121,20 @@ def extract_subtitles(store, subtitles_name):
                                      np.uint8)
     subtitles_facet = SubtitleFacet.create_facet(os.path.basename(subtitles_name), subtitles_modality, subtitles_color_index, colors, texts, times)
 
-
-def extract_video(store, video_name, chunksize=2 ** 24):
-    video_reader = imageio.get_reader(video_name)
-    video_metadata = video_reader.get_meta_data()
-    fps = video_metadata['fps']
-    nframes = video_metadata['nframes']
-    width, height = video_metadata['size']
-    video_reader.close()
-
-
-    if width < height:
-        ratio = 256 / width
-        width = 256
-        height = int(height * ratio)
-    else:
-        ratio = 256 / height
-        height = 256
-        width = int(width * ratio)
-    video_reader = imageio.get_reader(video_name, size=(width, height))
-    frame_size = 8 * width * height * 3
-    frames_per_chunk = chunksize // frame_size
-    chunk_height = 2 ** 20 / (3 * width * 8)
-    if chunk_height > height:
-        chunk_height = height
-
+def extract_video(store, video_name):
     video_modality = store.create_group('video')
-    video_facet = VideoFacet.create_facet('video0',
-                                          video_modality,
-                                          shape=(nframes, height, width, 3),
-                                          dtype=np.uint8,
-                                          rate=fps)
+    video_facet = VideoFacet.create_facet('video0', video_modality, video_name)
 
-
-    n_chunks = int(np.ceil(nframes / frames_per_chunk))
-    frame_iter = iter(video_reader)
-    for i in range(n_chunks):
-        print("Chunk {}/{}".format(i, n_chunks))
-        frames = np.array(list(itertools.islice(frame_iter, frames_per_chunk)))
-        video_facet.write(i * frames_per_chunk, frames)
-
-
-def uncompress_video(video_name, subtitles_name, skip_video=False, chunksize=2 ** 24):
+def uncompress_video(video_name, subtitles_name, skip_video=False):
         print("Extracting video {} with subtitles".format(video_name, subtitles_name))
         store_name = '{}.h5'.format(os.path.splitext(video_name)[0])
         with h5py.File(store_name, 'w') as store:
             extract_audio(store, video_name)
             extract_subtitles(store, subtitles_name)
             if not skip_video:
-                extract_video(store, video_name, chunksize)
+                extract_video(store, video_name)
+
+
 
 
 
