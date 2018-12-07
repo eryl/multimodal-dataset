@@ -1,6 +1,7 @@
 import h5py
 import numpy as np
 
+from multimodal.dataset.facet_mod import Facet
 
 class VideoDataset(object):
     def __init__(self, store):
@@ -25,16 +26,14 @@ class VideoDataset(object):
         :return:
         """
         if self.index is None:
-            index = {}
+            index = []
 
-            i = 0
-            for name, group_object in self.store.items():
+            for name, group_object in sorted(self.store.items()):
                 subtitles_group = group_object['subtitles']
                 times = subtitles_group['times'][:]
                 texts = subtitles_group['texts'][:]
                 length = [len(text.split()) for text in texts]
-                index[name] = (times, texts, length)
-                i += 1
+                index.append((name, times, texts, length))
             self.index = index
 
             
@@ -46,7 +45,17 @@ class VideoDataset(object):
         self.build_subtitle_index()
         return [length for times, texts, lengths in self.index.values() for length in lengths]
 
-    def get_dataset(self, index):
-        pass
+    def get_subtitle(self, index):
+        self.build_subtitle_index()
+        for i, (name, times, texts, length) in enumerate(self.index):
+            if index < len(times):
+                start, end = times[index]
+                ar = self.store[name + '/sound'].attrs['ar']
+                text = texts[index]
 
+                sound = self.store[name + '/sound'][int(start*ar):int(end*ar)]
+                return (sound, text, ar)
+            else:
+                index -= len(times)
+        raise IndexError("Index out of bounds")
 
