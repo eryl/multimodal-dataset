@@ -49,8 +49,8 @@ def main():
     parser.add_argument('--no-video', help="Don't extract the video stream", action='store_true')
     args = parser.parse_args()
 
-    if '.csv' in args.input:
-        with open(args.input) as fp:
+    if '.csv' in args.input[0]:
+        with open(args.input[0]) as fp:
             csv_reader = csv.DictReader(fp)
             videos = list(csv_reader)
     else:
@@ -68,8 +68,13 @@ def main():
         videos = [dict(mp4=video, srt=subtitle) for video, subtitle in zip(video_files, subtitles)]
 
     if args.nprocesses > 1:
-        video_queue = multiprocessing.Queue(args.nprocesses*2)
-        processes = [VideoConverter(video_queue) for i in range(args.nprocesses)]
+        pool = multiprocessing.Pool(args.nprocesses)
+        for video in videos:
+            video_file = video['mp4']
+            subtitles_file = video['srt']
+            pool.apply_async(uncompress_video, (video_file, subtitles_file), dict(skip_video=args.no_video))
+        pool.close()
+        pool.join()
     else:
         for video in videos:
             video_file = video['mp4']
@@ -122,6 +127,7 @@ def extract_subtitles(store, subtitles_name):
     subtitles_facet = SubtitleFacet.create_facet(os.path.basename(subtitles_name), subtitles_modality, subtitles_color_index, colors, texts, times)
 
 def extract_video(store, video_name):
+    print("Extracting video ",video_name)
     video_modality = store.create_group('video')
     video_facet = VideoFacet.create_facet('video0', video_modality, video_name)
 
