@@ -10,19 +10,27 @@ class MultiModalDatasets(object):
 
 
 class Modality(object):
-    def __init__(self, group):
+    def __init__(self, name, group):
+        self.name = name
         self.group = group
-        self.facets = []
+        self.facets = dict()
+        self.default_facet = None
         self.setup_facets()
 
     def setup_facets(self):
+
         for name, group in self.group.items():
             if is_facet(group):
                 facet = make_facet(group)
-                self.facets.append(facet)
+                if facet.is_default() or self.default_facet is None:
+                    self.default_facet = facet
+                self.facets[name] = facet
 
     def get_facets(self):
         raise NotImplementedError()
+
+    def get_facet(self, id=None):
+        return self.facets.get(id, self.default_facet)
 
 
 class MultiModalDataset(object):
@@ -30,13 +38,13 @@ class MultiModalDataset(object):
         self.hdf5_path = hdf5_path
         self.mode = mode
         self.store = h5py.File(hdf5_path, mode=mode)
-        self.modalities = []
+        self.modalities = dict()
         self.setup_modalities()
 
     def setup_modalities(self):
         for name, group in self.store.items():
-            modality = Modality(group)
-            self.modalities.append(modality)
+            modality = Modality(name, group)
+            self.modalities[name] = modality
 
 
 
