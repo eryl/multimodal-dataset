@@ -9,11 +9,11 @@ class SubtitleFacet(FacetHandler):
         self.times = self.facetgroup['times']
 
     @classmethod
-    def create_facets(cls, subtitles_modality, subtitles_path):
+    def create_facets(cls, subtitles_modality, subtitles_paths):
         import os.path
-        ## TODO: Add all subtitles modalities
-        subtitle_name = os.path.splitext(os.path.basename(subtitles_path))[0]
-        cls.create_facet(subtitle_name, subtitles_modality, subtitles_path)
+        for subtitles_path in subtitles_paths:
+            subtitle_name = os.path.splitext(os.path.basename(subtitles_path))[0]
+            cls.create_facet(subtitle_name, subtitles_modality, subtitles_path)
 
     @classmethod
     def create_facet(cls, name, modality_group, subtitles_file):

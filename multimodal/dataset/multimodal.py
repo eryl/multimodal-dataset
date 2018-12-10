@@ -18,11 +18,15 @@ class Modality(object):
         self.setup_facets()
 
     def setup_facets(self):
-
+        try:
+            default_facet_key = self.group.attrs['DefaultFacet']
+        except KeyError:
+            self.default_facet = None
+            default_facet_key = None
         for name, group in self.group.items():
             if is_facet(group):
                 facet = make_facet(group)
-                if facet.is_default() or self.default_facet is None:
+                if name == default_facet_key or self.default_facet is None:
                     self.default_facet = facet
                 self.facets[name] = facet
 
