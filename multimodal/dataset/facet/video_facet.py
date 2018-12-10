@@ -1,7 +1,6 @@
 import numpy as np
 import imageio
 import itertools
-import ffmpeg
 from multimodal.dataset.facet.facet_handler import FacetHandler
 
 class VideoFacet(FacetHandler):
@@ -38,9 +37,14 @@ class VideoFacet(FacetHandler):
             frame_start = frame_end
         return np.array(frames)
 
+    @classmethod
+    def create_facets(cls, video_modality, video_path):
+        # TODO: Add all video streams from video_path
+        cls.create_facet('video1', video_modality, video_path)
 
     @classmethod
     def create_facet(cls, name, video_modality, video_path, chunksize=256):
+
         video_reader = imageio.get_reader(video_path)
         video_metadata = video_reader.get_meta_data()
         fps = video_metadata['fps']
@@ -99,6 +103,7 @@ class VideoFacet(FacetHandler):
 
     @classmethod
     def create_facet_new(cls, name, video_modality, video_path, chunksize=256):
+        import ffmpeg
         video_reader = imageio.get_reader(video_path)
         video_metadata = video_reader.get_meta_data()
         fps = video_metadata['fps']
