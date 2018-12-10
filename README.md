@@ -21,7 +21,8 @@ In the base project directory, run:
 $ python setup.py develop
 ```
 
-This will add symbolic links in your python distro to this package, which will update when you pull new changes.
+This will add symbolic links in your python distro to this package, which will update 
+when you pull new changes.
 
 ## Demo
 A demo of how to use the datasets can be found in the `bin/extract_subtitle_audio.py` script. First you need a 
@@ -46,3 +47,7 @@ multimodal video dataset to work with. After installing the package (see above),
    If you get a numpy float deprecation warning, everything is still allright.
 
 The directory `data/sintel_waves` will now contain wav files named by the subtitle text containing the corresponding audio.
+
+## Batched data
+The datasets doesn't support batched data yet, since this will 
+require packing and padding of sequences. This is on the todo-list.
