@@ -1,3 +1,5 @@
+import tempfile
+
 import numpy as np
 import imageio
 import itertools
@@ -54,28 +56,34 @@ class VideoFacet(FacetHandler):
         return np.array(frames)
 
     @classmethod
-    def create_facets(cls, video_modality, video_path):
+    def create_facets(cls, video_modality, video_path, video_size):
         # TODO: Add all video streams from video_path
-        cls.create_facet('video1', video_modality, video_path)
+        cls.create_facet('video1', video_modality, video_path, video_size)
 
     @classmethod
-    def create_facet(cls, name, video_modality, video_path, chunksize=256):
-
+    def create_facet(cls, name, video_modality, video_path, video_size, chunksize=256):
         video_reader = imageio.get_reader(video_path)
         video_metadata = video_reader.get_meta_data()
         fps = video_metadata['fps']
         nframes = video_metadata['nframes']
         width, height = video_metadata['size']
         video_reader.close()
-
-        if width < height:
-            ratio = 256 / width
-            width = 256
+        target_width, target_height = video_size
+        print("Original size is ", width, height)
+        print("Target size is ", target_width, target_height)
+        if target_width is not None and target_height is not None:
+            width = target_width
+            height = target_height
+        elif target_width is not None:
+            ratio = target_width / width
+            print("Ratio is ", ratio)
+            width = target_width
             height = int(height * ratio)
-        else:
-            ratio = 256 / height
-            height = 256
+        elif target_height is not None:
+            ratio = target_height / height
+            height = target_height
             width = int(width * ratio)
+
         video_reader = imageio.get_reader(video_path, size=(width, height))
 
         facetgroup = video_modality.create_group(name)
@@ -118,21 +126,31 @@ class VideoFacet(FacetHandler):
         return VideoFacet(facetgroup)
 
     @classmethod
-    def create_facet_new(cls, name, video_modality, video_path, chunksize=256):
+    def create_facet_new(cls, name, video_modality, video_path, video_size, chunksize=256):
         import ffmpeg
+        import os.path
+
         video_reader = imageio.get_reader(video_path)
         video_metadata = video_reader.get_meta_data()
         fps = video_metadata['fps']
         nframes = video_metadata['nframes']
         width, height = video_metadata['size']
         video_reader.close()
-
-        if width < height:
-            width = 256
-            height = -1
-        else:
-            height = 256
-            width = -1
+        target_width, target_height = video_size
+        print("Original size is ", width, height)
+        print("Target size is ", target_width, target_height)
+        if target_width is not None and target_height is not None:
+            width = target_width
+            height = target_height
+        elif target_width is not None:
+            ratio = target_width / width
+            print("Ratio is ", ratio)
+            width = target_width
+            height = int(height * ratio)
+        elif target_height is not None:
+            ratio = target_height / height
+            height = target_height
+            width = int(width * ratio)
 
         facetgroup = video_modality.create_group(name)
         facetgroup.attrs['FacetHandler'] = 'VideoFacet'

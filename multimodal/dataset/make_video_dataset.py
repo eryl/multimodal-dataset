@@ -17,13 +17,13 @@ def extract_subtitles(store, subtitles_files):
     SubtitleFacet.create_facets(subtitles_modality, subtitles_files)
 
 
-def extract_video(store, video_name):
+def extract_video(store, video_name, video_size):
     print("Extracting video ",video_name)
     video_modality = store.create_group('video')
-    VideoFacet.create_facets(video_modality, video_name)
+    VideoFacet.create_facets(video_modality, video_name, video_size)
 
 
-def make_dataset(video_name, subtitles_name=None, skip_video=False, skip_audio=False):
+def make_dataset(video_name, subtitles_name=None, skip_video=False, skip_audio=False, video_size=(None, None)):
         print("Making video dataset using video {} and subtitles {}".format(video_name, subtitles_name))
         store_name = '{}.h5'.format(os.path.splitext(video_name)[0])
         with h5py.File(store_name, 'a') as store:
@@ -32,5 +32,5 @@ def make_dataset(video_name, subtitles_name=None, skip_video=False, skip_audio=F
             if subtitles_name is not None:
                 extract_subtitles(store, subtitles_name)
             if not skip_video:
-                extract_video(store, video_name)
+                extract_video(store, video_name, video_size=video_size)
 
