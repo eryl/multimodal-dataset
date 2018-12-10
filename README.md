@@ -1,6 +1,6 @@
 # MULTIMODAL PROJECT
 
-This package is for doing machine learning on multimodal data, video with subtitles in particular.
+This package contains modules for handling multimodal data, with a focus on video with subtitles.
 
 ## Requirements
 The package relies on the packages:
