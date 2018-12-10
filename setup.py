@@ -8,7 +8,7 @@ def readme():
 
 setup(name='multimodal',
       version='0.1',
-      description='Multimodal experiments on video',
+      description='Multimodal datasets',
       url='http://ghetto.sics.se/ylipaa/multimodal',
       author='Erik Ylipää',
       author_email='erik.ylipaa@ri.se',
