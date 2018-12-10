@@ -8,7 +8,7 @@ import re
 import numpy as np
 import scipy.io.wavfile as wavefile
 
-from multimodal.dataset.video import SubtitlesAudioDataset
+from multimodal.dataset.video import VideoDataset
 
 
 def slugify(value, allow_unicode=False):
@@ -39,11 +39,12 @@ def main():
     if output_dir is None:
         output_dir = '.'
     for dataset_path in args.datasets:
-        with SubtitlesAudioDataset(dataset_path) as dataset:
-            n_subtitles = len(dataset)
+        with VideoDataset(dataset_path) as dataset:
+            subtitle_audio_wrapper = dataset.get_subtitles_audio_wrapper()
+            n_subtitles = len(subtitle_audio_wrapper)
             n_digits = int(np.ceil(np.log10(n_subtitles)))
             digit_format = '{{:0{}d}}_'.format(n_digits)
-            for i, (text, audio) in enumerate(dataset):
+            for i, (text, audio) in enumerate(subtitle_audio_wrapper):
                 filename = os.path.join(output_dir, digit_format.format(i) + slugify(text) + '.wav')
                 wavefile.write(filename, 16000, audio)
 

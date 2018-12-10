@@ -1,14 +1,39 @@
 from multimodal.dataset.multimodal import MultiModalDataset
 
+class VideoDataset(MultiModalDataset):
+    def __init__(self, *args, **kwargs):
+        super(VideoDataset, self).__init__(*args, **kwargs)
+        self.subtitles = self.modalities['subtitles'].get_facet()
+        self.audio = self.modalities['audio'].get_facet()
+        self.video = self.modalities['video'].get_facet()
 
-class SubtitlesAudioDataset(MultiModalDataset):
+    def get_subtitles_audio_wrapper(self):
+        return SubtitlesAndStreamsWrapper(subtitles=self.subtitles, streams=[self.audio])
+
+    def get_subtitles_video_wrapper(self):
+        return SubtitlesAndStreamsWrapper(subtitles=self.subtitles, streams=[self.video])
+
+    def get_subtitles_audio_video_wrapper(self):
+        return SubtitlesAndStreamsWrapper(subtitles=self.subtitles, streams=[self.audio, self.video])
+
+    def get_subtitles_complement_audio_wrapper(self):
+        return SubtitlesComplementAndStreamsWrapper(subtitles=self.subtitles, streams=[self.audio])
+
+    def get_subtitles_complement_video_wrapper(self):
+        return SubtitlesComplementAndStreamsWrapper(subtitles=self.subtitles, streams=[self.video])
+
+    def get_subtitles_complement_audio_video_wrapper(self):
+        return SubtitlesComplementAndStreamsWrapper(subtitles=self.subtitles, streams=[self.audio, self.video])
+
+
+class SubtitlesAndStreamsWrapper(object):
     """
     Dataset iterating over subtitles and audio in the video dataset.
     """
-    def __init__(self, *args, **kwargs):
-        super(SubtitlesAudioDataset, self).__init__(*args, **kwargs)
-        self.subtitles = self.modalities['subtitles'].get_facet()
-        self.audio = self.modalities['audio'].get_facet()
+    def __init__(self, *args, subtitles, streams, **kwargs):
+        super(SubtitlesAndStreamsWrapper, self).__init__(*args, **kwargs)
+        self.subtitles = subtitles
+        self.streams = streams
 
     def __len__(self):
         return len(self.subtitles)
@@ -17,26 +42,23 @@ class SubtitlesAudioDataset(MultiModalDataset):
         subtitles = self.subtitles[item]
         if isinstance(item, slice):
             times, text = zip(*subtitles)
-            audio = self.audio.get_frames(times)
-            return zip(text, audio)
+            frames = [stream.get_frames(times) for stream in self.streams]
+            return zip(text, *frames)
         elif isinstance(item, int):
             times, text = subtitles
-            audio = self.audio.get_frames(times)
-            return text, audio
+            frames = [stream.get_frames(times) for stream in self.streams]
+            return [text] + frames
         else:
             raise TypeError("Invalid argument type. {}".format(type(item)))
 
 
-class ComplementSubtitlesAudioVideoDataset(MultiModalDataset):
+class SubtitlesComplementAndStreamsWrapper(SubtitlesAndStreamsWrapper):
     """
     Dataset iterating over audio and video in the video dataset which are not part of the subtitles.
     """
     def __init__(self, *args, minimum_time=1, **kwargs):
-        super(ComplementSubtitlesAudioVideoDataset, self).__init__(*args, **kwargs)
-        self.subtitles = self.modalities['subtitles'].get_facet()
-        self.audio = self.modalities['audio'].get_facet()
-        self.video = self.modalities['video'].get_facet()
-        self.times = self.subtitles.get_time_complement(minimum_time)
+        super(SubtitlesComplementAndStreamsWrapper, self).__init__(*args, **kwargs)
+        self.times = self.subtitles.get_times_complement(minimum_time)
 
     def __len__(self):
         return len(self.times)
@@ -44,39 +66,13 @@ class ComplementSubtitlesAudioVideoDataset(MultiModalDataset):
     def __getitem__(self, item):
         if isinstance(item, slice):
             times = self.times[item]
-            audio = self.audio.get_frames(times)
-            video = self.video.get_frames(times)
-            return zip(audio, video)
+            frames = [stream.get_frames(times) for stream in self.streams]
+            return zip(*frames)
         elif isinstance(item, int):
             times = self.times[item]
-            audio = self.audio.get_frames(times)
-            video = self.video.get_frames(times)
-            return audio, video
+            frames = [stream.get_frames(times) for stream in self.streams]
+            return frames
         else:
             raise TypeError("Invalid argument type. {}".format(type(item)))
 
 
-class SubtitlesVideoDataset(MultiModalDataset):
-    """
-    Dataset iterating over subtitles and video in the video dataset.
-    """
-    def __init__(self, *args, **kwargs):
-        super(SubtitlesVideoDataset, self).__init__(*args, **kwargs)
-        self.subtitles = self.modalities['subtitles'].get_facet()
-        self.video = self.modalities['video'].get_facet()
-
-    def __len__(self):
-        return len(self.subtitles)
-
-    def __getitem__(self, item):
-        subtitles = self.subtitles[item]
-        if isinstance(item, slice):
-            times, text = zip(*subtitles)
-            video = self.video.get_frames(times)
-            return zip(text, video)
-        elif isinstance(item, int):
-            times, text = subtitles
-            video = self.video.get_frames(times)
-            return text, video
-        else:
-            raise TypeError("Invalid argument type. {}".format(type(item)))
