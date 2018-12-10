@@ -46,5 +46,15 @@ class MultiModalDataset(object):
             modality = Modality(name, group)
             self.modalities[name] = modality
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.store.close()
+
+    # def __iter__(self):
+    #     for i in range(len(self)):
+    #         yield self[i]
+
 
 
