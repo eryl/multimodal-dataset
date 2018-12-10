@@ -27,3 +27,21 @@ class AudioFacet(FacetHandler):
         group.attrs['rate'] = rate
         group.attrs['FacetHandler'] = 'AudioFacet'
         return AudioFacet(group)
+
+    def get_frames(self, times):
+        """
+        Return the frames given by times as a numpy array
+        :return:
+        """
+        try:
+            start, end = times
+            start_frame = int(start * self.rate)
+            end_frame = int(end * self.rate)
+            return self.frames[start_frame: end_frame]
+        except ValueError:
+            frames = []
+            frames_indices = (times * self.rate).astype(np.uint)
+            for i in range(len(frames_indices)):
+                start_frame, end_frame = frames_indices[i]
+                frames.append(self.frames[start_frame: end_frame])
+            return frames

@@ -10,18 +10,34 @@ class VideoFacet(FacetHandler):
         self.frame_sizes = self.facetgroup['frame_sizes']
         self.fps = self.facetgroup.attrs['rate']
 
-    def get_frames(self, start, end):
+    def get_frames(self, times):
         """
-        Return the frames between the start and end as a numpy array
-        :param start: Start time in seconds
-        :param end: End time in seconds
+        Return the frames given by times as a numpy array
         :return:
         """
-        start_frame = int(start*self.fps)
-        end_frame = int(end*self.fps)
+        try:
+            start, end = times
+            start_frame = int(start*self.fps)
+            end_frame = int(end*self.fps)
+            return self.uncompress_frames(start_frame, end_frame)
+        except ValueError:
+            frames = []
+            frames_indices = (times*self.fps).astype(np.uint)
+            for i in range(len(frames_indices)):
+                start_frame, end_frame = frames_indices[i]
+                frames.append(self.uncompress_frames(start_frame, end_frame))
+            return frames
+
+    def uncompress_frames(self, start_frame, end_frame):
+        """
+        Returns the uncompressed frames from a start_frame (inclusive) to end_frame (non-inclusive)
+        :param start_frame: First frame to decompress.
+        :param end_frame: end of range, this frame is not included in the decompressed volume
+        :return: A numpy nd-array with shape (end-start, height, width, channels)
+        """
         sizes = self.frame_sizes[start_frame:end_frame]
         if start_frame > 0:
-            start_byte = self.frame_sizes[start_frame-1]
+            start_byte = self.frame_sizes[start_frame - 1]
         else:
             start_byte = 0
         end_byte = sizes[-1]

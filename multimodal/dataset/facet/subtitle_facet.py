@@ -1,6 +1,6 @@
 import numpy as np
-import h5py
 from multimodal.dataset.facet.facet_handler import FacetHandler
+
 
 class SubtitleFacet(FacetHandler):
     def __init__(self, *args, **kwargs):
@@ -9,7 +9,65 @@ class SubtitleFacet(FacetHandler):
         self.times = self.facetgroup['times']
 
     @classmethod
-    def create_facet(cls, name, modality_group, subtitles_color_index, colors, texts, times):
+    def create_facets(cls, subtitles_modality, subtitles_path):
+        import os.path
+        ## TODO: Add all subtitles modalities
+        subtitle_name = os.path.splitext(os.path.basename(subtitles_path))[0]
+        cls.create_facet(subtitle_name, subtitles_modality, subtitles_path)
+
+    @classmethod
+    def create_facet(cls, name, modality_group, subtitles_file):
+        import srt
+        import html.parser
+        import h5py
+
+        class SubtitleParser(html.parser.HTMLParser):
+            def __init__(self):
+                super(SubtitleParser, self).__init__()
+                self.color = None
+                self.data = None
+
+            def handle_starttag(self, tag, attrs):
+                if tag == 'font':
+                    if attrs[0][0] == 'color':
+                        color = attrs[0][1].strip('#')
+                        self.color = (int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16))
+
+            def handle_data(self, data):
+                self.data = data
+
+            def wipe(self):
+                self.data = None
+                self.color = None
+
+        with open(subtitles_file) as fp:
+            subtitles = list(srt.parse(fp.read()))
+        subtitle_parser = SubtitleParser()
+
+        font_colors = dict()
+        color_i = 0
+        colors = []
+        texts = []
+        times = []
+        for subtitle in subtitles:
+            subtitle_parser.wipe()
+            start = subtitle.start.total_seconds()
+            end = subtitle.end.total_seconds()
+            subtitle_parser.feed(subtitle.content)
+            text = subtitle_parser.data
+            color_tuple = subtitle_parser.color
+            if color_tuple is not None:
+                if not color_tuple in font_colors:
+                    font_colors[color_tuple] = color_i
+                    color_i += 1
+                color = font_colors[color_tuple]
+            else:
+                color = -1
+            times.append([start, end])
+            colors.append(color)
+            texts.append(text)
+        subtitles_color_index = np.array([color for color, i in sorted(font_colors.items(), key=lambda x: x[1])],
+                                         np.uint8)
         subtitles_facet = modality_group.create_group(name)
         subtitles_facet.create_dataset('color_index', data=subtitles_color_index)
         subtitles_facet.create_dataset('colors', data=np.array(colors, dtype=np.int8))
@@ -38,6 +96,8 @@ class SubtitleFacet(FacetHandler):
             texts = self.texts[item]
             return zip(times, texts)
         elif isinstance(item, int):
+            if item >= len(self.times):
+                raise IndexError()
             time = self.times[item]
             text = self.texts[item]
             return time, text
