@@ -159,65 +159,70 @@ class VideoFacet(FacetHandler):
         frame_sizes = facetgroup.create_dataset('frame_sizes',
                                                 shape=(0,),
                                                 maxshape=(None,),
-                                                chunks=(2**11,),
+                                                chunks=(2 ** 11,),
                                                 dtype=np.uint64)
         frames = facetgroup.create_dataset('frames',
                                            shape=(0,),
                                            maxshape=(None,),
                                            dtype=np.uint8,
-                                           chunks=(2**16,),
+                                           chunks=(2 ** 16,),
                                            compression='gzip',
                                            shuffle=True)
+        n_chunks = int(np.ceil(nframes / chunksize))
 
-        process1 = (
+        directory = tempfile.mkdtemp()
+        n_digits = int(np.ceil(np.log10(nframes)))
+        filename = os.path.join(directory,
+                                os.path.splitext(os.path.basename(video_path))[0] + '_%0{}d.jpg'.format(n_digits))
+
+        out, _ = (
             ffmpeg
                 .input(video_path)
                 .filter('scale', size='{}:{}'.format(width, height))
-                .output('pipe:', format='image2', vcodec='mjpeg', **{'qscale:v':2})
-                .run_async(pipe_stdout=True)
+                .output(filename, format='image2', vcodec='mjpeg', **{'qscale:v':2})
+                .run()
         )
-
-
-        while True:
-            in_bytes = process1.stdout.read(width * height * 3)
-            if not in_bytes:
-                break
-            in_frame = (
-                np
-                    .frombuffer(in_bytes, np.uint8)
-                    .reshape([height, width, 3])
-            )
-            out_frame = in_frame * 0.3
-            process2.stdin.write(
-                frame
-                    .astype(np.uint8)
-                    .tobytes()
-            )
-
-        process2.stdin.close()
-        process1.wait()
-        process2.wait()
-
-        n_chunks = int(np.ceil(nframes / chunksize))
-        frame_iter = iter(video_reader)
-        current_frame_index = 0
+        data = []
+        sizes = []
+        cumsum_sizes = []
+        read_bytes = 0
+        filename_pattern = os.path.join(directory,
+                                 os.path.splitext(os.path.basename(video_path))[0] + '_{{:0{}d}}.jpg'.format(n_digits))
         current_frame_size_index = 0
-        cumulative_frame_sizes = 0
-        for i in range(n_chunks):
-            print("Chunk {}/{}".format(i, n_chunks))
-            chunk_frames = list(itertools.islice(frame_iter, chunksize))
-            frames_arrays = [np.frombuffer(imageio.imsave('<bytes>', im, 'jpeg', flags=100), dtype=np.uint8) for im in chunk_frames]
-            chunk_frame_sizes = np.cumsum([len(arr) for arr in frames_arrays]) + cumulative_frame_sizes
-            cumulative_frame_sizes = chunk_frame_sizes[-1]
-            frames_bytes = np.concatenate(frames_arrays)
-            old_size = frames.shape[0]
-            new_size = old_size + len(frames_bytes)
-            frames.resize((new_size,))
-            frame_sizes.resize((frame_sizes.shape[0] + len(chunk_frame_sizes),))
-            frames[current_frame_index:current_frame_index+len(frames_bytes)] = frames_bytes
-            frame_sizes[current_frame_size_index:current_frame_size_index+len(chunk_frame_sizes)] = chunk_frame_sizes
-            current_frame_size_index += len(chunk_frame_sizes)
-            current_frame_index += len(frames_bytes)
+        current_frame_index = 0
+        for i in range(nframes):
+            filename = filename_pattern.format(i)
+            with open(filename, 'rb') as image:
+                bytes = image.read()
+                data.append(bytes)
+                size = len(bytes)
+                sizes.append(size)
+                cumsum_sizes.append(read_bytes + size)
+                read_bytes += size
+            if read_bytes > chunksize:
+                chunk_frame_sizes = np.array(sizes) + current_frame_index
+                frames_bytes = np.concatenate(data)
+                old_size = frames.shape[0]
+                new_size = old_size + len(frames_bytes)
+                frames.resize((new_size,))
+                frame_sizes.resize((frame_sizes.shape[0] + len(chunk_frame_sizes),))
+                frames[current_frame_index:current_frame_index + len(frames_bytes)] = frames_bytes
+                frame_sizes[current_frame_size_index:current_frame_size_index + len(chunk_frame_sizes)] = chunk_frame_sizes
+                current_frame_size_index += len(chunk_frame_sizes)
+                current_frame_index += len(frames_bytes)
+                read_bytes = 0
+                sizes = []
+                data = []
+                cumsum_sizes = []
+        chunk_frame_sizes = np.array(sizes) + current_frame_index
+        frames_bytes = np.concatenate(data)
+        old_size = frames.shape[0]
+        new_size = old_size + len(frames_bytes)
+        frames.resize((new_size,))
+        frame_sizes.resize((frame_sizes.shape[0] + len(chunk_frame_sizes),))
+        frames[current_frame_index:current_frame_index + len(frames_bytes)] = frames_bytes
+        frame_sizes[current_frame_size_index:current_frame_size_index + len(chunk_frame_sizes)] = chunk_frame_sizes
+
 
         return VideoFacet(facetgroup)
 
