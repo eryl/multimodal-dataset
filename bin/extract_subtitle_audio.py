@@ -40,7 +40,7 @@ def main():
         output_dir = '.'
     for dataset_path in args.datasets:
         with VideoDataset(dataset_path) as dataset:
-            subtitle_audio_wrapper = dataset.get_subtitles_audio_wrapper()
+            subtitle_audio_wrapper = dataset.get_facet_wrapper('subtitles', ['audio'])
             n_subtitles = len(subtitle_audio_wrapper)
             n_digits = int(np.ceil(np.log10(n_subtitles)))
             digit_format = '{{:0{}d}}_'.format(n_digits)

@@ -1,4 +1,5 @@
 import numpy as np
+from numbers import Integral
 from multimodal.dataset.multimodal import MultiModalDataset, MultiModalDatasets
 
 
@@ -6,10 +7,14 @@ class SubtitlesAndStreamsWrapper(object):
     """
     Dataset iterating over subtitles and audio in the video dataset.
     """
-    def __init__(self, *args, subtitles, streams, **kwargs):
+    def __init__(self, *args, subtitles, streams, max_duration=None, rng=None, **kwargs):
         super(SubtitlesAndStreamsWrapper, self).__init__(*args, **kwargs)
+        if rng is None:
+            rng = np.random.RandomState()
         self.subtitles = subtitles
         self.streams = streams
+        self.max_duration = max_duration
+        self.rng = rng
 
     def __len__(self):
         return len(self.subtitles)
@@ -18,10 +23,22 @@ class SubtitlesAndStreamsWrapper(object):
         subtitles = self.subtitles[item]
         if isinstance(item, slice):
             times, text = zip(*subtitles)
+            if self.max_duration is not None:
+                # We should randomly sample shorter time intervals for the times which are to long
+                segment_lengths = times[:,1] - times[:,0]
+                long_indices = times[:,1] - times[:,0] > self.max_duration
+                segment_start = self.rng.random_sample(times.shape[0]) * (segment_lengths - self.max_duration)
+                times[long_indices] = np.hstack([segment_start, segment_start+self.max_duration])
             frames = [stream.get_frames(times) for stream in self.streams]
             return zip(text, *frames)
-        elif isinstance(item, int):
+        elif isinstance(item, Integral):
             times, text = subtitles
+            if self.max_duration is not None:
+                segment_length = times[1] - times[0]
+                if segment_length > self.max_duration:
+                    start_time = self.rng.random_sample() * (segment_length - self.max_duration)
+                    times[0] = start_time
+                    times[1] = start_time + self.max_duration
             frames = [stream.get_frames(times) for stream in self.streams]
             return [text] + frames
         else:
@@ -42,10 +59,22 @@ class SubtitlesComplementAndStreamsWrapper(SubtitlesAndStreamsWrapper):
     def __getitem__(self, item):
         if isinstance(item, slice):
             times = self.times[item]
+            if self.max_duration is not None:
+                # We should randomly sample shorter time intervals for the times which are to long
+                segment_lengths = times[:,1] - times[:,0]
+                long_indices = times[:,1] - times[:,0] > self.max_duration
+                segment_start = self.rng.random_sample(times.shape[0]) * (segment_lengths - self.max_duration)
+                times[long_indices] = np.hstack([segment_start, segment_start+self.max_duration])
             frames = [stream.get_frames(times) for stream in self.streams]
             return zip(*frames)
-        elif isinstance(item, int):
+        elif isinstance(item, Integral):
             times = self.times[item]
+            if self.max_duration is not None:
+                segment_length = times[1] - times[0]
+                if segment_length > self.max_duration:
+                    start_time = self.rng.random_sample() * (segment_length - self.max_duration)
+                    times[0] = start_time
+                    times[1] = start_time + self.max_duration
             frames = [stream.get_frames(times) for stream in self.streams]
             return frames
         else:
@@ -59,23 +88,13 @@ class VideoDataset(MultiModalDataset):
         self.audio = self.modalities['audio'].get_facet()
         self.video = self.modalities['video'].get_facet()
 
-    def get_subtitles_audio_wrapper(self):
-        return SubtitlesAndStreamsWrapper(subtitles=self.subtitles, streams=[self.audio])
-
-    def get_subtitles_video_wrapper(self):
-        return SubtitlesAndStreamsWrapper(subtitles=self.subtitles, streams=[self.video])
-
-    def get_subtitles_audio_video_wrapper(self):
-        return SubtitlesAndStreamsWrapper(subtitles=self.subtitles, streams=[self.audio, self.video])
-
-    def get_subtitles_complement_audio_wrapper(self):
-        return SubtitlesComplementAndStreamsWrapper(subtitles=self.subtitles, streams=[self.audio])
-
-    def get_subtitles_complement_video_wrapper(self):
-        return SubtitlesComplementAndStreamsWrapper(subtitles=self.subtitles, streams=[self.video])
-
-    def get_subtitles_complement_audio_video_wrapper(self):
-        return SubtitlesComplementAndStreamsWrapper(subtitles=self.subtitles, streams=[self.audio, self.video])
+    def get_facet_wrapper(self, key_facet, stream_facets, max_duration=None, facet_options=None, rng=None):
+        streams = [self.modalities[stream_facet].get_facet() for stream_facet in stream_facets]
+        if key_facet == 'subtitles':
+            return SubtitlesAndStreamsWrapper(subtitles=self.subtitles, streams=streams, max_duration=max_duration, rng=rng)
+        elif key_facet == 'subtitles_complement':
+            return SubtitlesComplementAndStreamsWrapper(subtitles=self.subtitles, streams=streams,
+                                                        max_duration=max_duration, rng=rng)
 
 
 class WrapperCollection(object):
@@ -92,7 +111,7 @@ class WrapperCollection(object):
         if isinstance(item, slice):
             # Figure out which wrappers the item spans
             raise NotImplementedError()
-        elif isinstance(item, int):
+        elif isinstance(item, Integral):
             wrapper_id = np.searchsorted(self.cumsum_lengths, item)
             wrapper_item = item - self.cumsum_lengths[wrapper_id]
             return self.wrappers[wrapper_id][wrapper_item]
@@ -104,38 +123,17 @@ class VideoDatasets(object):
     def __init__(self, dataset_paths):
         self.dataset_paths = dataset_paths
         self.datasets = [VideoDataset(dataset_path) for dataset_path in dataset_paths]
-        self.subtitles = [dataset.modalities['subtitles'].get_facet() for dataset in self.datasets]
-        self.audio = [dataset.modalities['audio'].get_facet() for dataset in self.datasets]
-        self.video = [dataset.modalities['video'].get_facet() for dataset in self.datasets]
 
-    def get_subtitles_audio_wrapper(self):
-        wrappers = [SubtitlesAndStreamsWrapper(subtitles=subtitles, streams=[audio])
-                    for subtitles, audio in zip(self.subtitles, self.audio)]
+    def get_facet_wrapper(self, *args, **kwargs):
+        wrappers = [dataset.get_facet_wrapper(*args, **kwargs) for dataset in self.datasets]
         return WrapperCollection(wrappers)
 
-    def get_subtitles_video_wrapper(self):
-        wrappers = [SubtitlesAndStreamsWrapper(subtitles=subtitles, streams=[video])
-                    for subtitles, video in zip(self.subtitles, self.video)]
-        return WrapperCollection(wrappers)
+    def __enter__(self):
+        return self
 
-    def get_subtitles_audio_video_wrapper(self):
-        wrappers = [SubtitlesAndStreamsWrapper(subtitles=subtitles, streams=[audio, video])
-                    for subtitles, audio, video in zip(self.subtitles, self.audio, self.video)]
-        return WrapperCollection(wrappers)
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for dataset in self.datasets:
+            dataset.close()
 
-    def get_subtitles_complement_audio_wrapper(self):
-        wrappers = [SubtitlesComplementAndStreamsWrapper(subtitles=subtitles, streams=[audio])
-                    for subtitles, audio in zip(self.subtitles, self.audio)]
-        return WrapperCollection(wrappers)
-
-    def get_subtitles_complement_video_wrapper(self):
-        wrappers = [SubtitlesComplementAndStreamsWrapper(subtitles=subtitles, streams=[video])
-                    for subtitles, video in zip(self.subtitles, self.video)]
-        return WrapperCollection(wrappers)
-
-    def get_subtitles_complement_audio_video_wrapper(self):
-        wrappers = [SubtitlesComplementAndStreamsWrapper(subtitles=subtitles, streams=[audio, video])
-                    for subtitles, audio, video in zip(self.subtitles, self.audio, self.video)]
-        return WrapperCollection(wrappers)
 
 

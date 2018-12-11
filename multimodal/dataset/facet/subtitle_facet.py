@@ -1,6 +1,6 @@
 import numpy as np
 from multimodal.dataset.facet.facet_handler import FacetHandler
-
+from numbers import Integral
 
 class SubtitleFacet(FacetHandler):
     def __init__(self, *args, **kwargs):
@@ -81,7 +81,7 @@ class SubtitleFacet(FacetHandler):
     def get_times_complement(self, minimum_time=0):
         """Returns timestamps of parts which doesn't have subtitles"""
         n_times = len(self.times)
-        times_complement = np.zeros((n_times, 2), dtype=self.times.dtype)
+        times_complement = np.zeros((n_times+1, 2), dtype=self.times.dtype)
         times_complement[1:, 0] = self.times[:, 1]
         times_complement[:-1, 1] = self.times[:, 0]
         long_enough = times_complement[:,1] - times_complement[:,0] > minimum_time
@@ -95,7 +95,7 @@ class SubtitleFacet(FacetHandler):
             times = self.times[item]
             texts = self.texts[item]
             return zip(times, texts)
-        elif isinstance(item, int):
+        elif isinstance(item, Integral):
             if item >= len(self.times):
                 raise IndexError()
             time = self.times[item]

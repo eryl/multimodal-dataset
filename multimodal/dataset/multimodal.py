@@ -7,6 +7,7 @@ class MultiModalDatasets(object):
     """
     def __init__(self, hdf5_paths):
         self.hdf5_paths = hdf5_paths
+        self.datasets = [MultiModalDataset(hdf5_path) for hdf5_path in hdf5_paths]
 
 
 class Modality(object):
@@ -54,6 +55,9 @@ class MultiModalDataset(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.store.close()
+
+    def close(self):
         self.store.close()
 
     # def __iter__(self):
