@@ -40,7 +40,7 @@ class SubtitlesAndStreamsWrapper(object):
                     times[0] = start_time
                     times[1] = start_time + self.max_duration
             frames = [stream.get_frames(times) for stream in self.streams]
-            return [text] + frames
+            return (text, frames)
         else:
             raise TypeError("Invalid argument type. {}".format(type(item)))
 
