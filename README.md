@@ -30,7 +30,7 @@ multimodal video dataset to work with. After installing the package (see above),
 
 0. Install required software, `ffmpeg`, `ffmpeg-python`:
    
-   1. ffmpeg:
+   i. ffmpeg:
       
       Debian/Ubuntu 
       ```text   
@@ -43,7 +43,7 @@ multimodal video dataset to work with. After installing the package (see above),
       $ conda install ffmpeg
       ```
             
-   2. Python packages: 
+   ii. Python packages: 
       ```text   
       $ pip install ffmpeg-python
       ```
