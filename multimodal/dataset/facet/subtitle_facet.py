@@ -17,7 +17,7 @@ class SubtitleFacet(FacetHandler):
 
     @classmethod
     def create_facet(cls, name, modality_group, subtitles_file):
-        import srt
+        import multimodal.srt as srt
         import html.parser
         import h5py
 
@@ -68,7 +68,7 @@ class SubtitleFacet(FacetHandler):
             texts.append(text)
         subtitles_color_index = np.array([color for color, i in sorted(font_colors.items(), key=lambda x: x[1])],
                                          np.uint8)
-        subtitles_facet = modality_group.create_group(name)
+        subtitles_facet = modality_group.require_group(name)
         subtitles_facet.create_dataset('color_index', data=subtitles_color_index)
         subtitles_facet.create_dataset('colors', data=np.array(colors, dtype=np.int8))
         subtitle_texts = subtitles_facet.create_dataset('texts', shape=(len(texts),),

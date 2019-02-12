@@ -8,7 +8,7 @@ The package relies on the packages:
  - `numpy`
  - `imageio`.
 
-For converting movies to datasets, you will need `python-ffmpeg` and `srt`. 
+For converting movies to datasets, you will need `ffmpeg-python`. There are many python ffmpeg interfaces, make sure you use [ffmpeg-python](https://github.com/kkroening/ffmpeg-python). 
 You will also need a ffmpeg binary installed on your system.
 
 To run the demo (see below) you will also need the `requests` package, 
@@ -28,6 +28,26 @@ when you pull new changes.
 A demo of how to use the datasets can be found in the `bin/extract_subtitle_audio.py` script. First you need a 
 multimodal video dataset to work with. After installing the package (see above), do the following:
 
+0. Install required software, `ffmpeg`, `ffmpeg-python`:
+   
+   1. ffmpeg:
+      
+      Debian/Ubuntu 
+      ```text   
+      $ sudo apt-get install ffmpeg
+      ```
+      
+      Anaconda:      
+      If you use Anaconda, you can install a python-local ffmpeg binary which doesn't require superuser privilege:
+      ```text   
+      $ conda install ffmpeg
+      ```
+            
+   2. Python packages: 
+      ```text   
+      $ pip install ffmpeg-python
+      ```
+      
 1. Download the dataset: 
    ```text
    $ mkdir -p data && cd data && python ../bin/download_sintel.py
