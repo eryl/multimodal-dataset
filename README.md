@@ -22,14 +22,13 @@ In the base project directory, run:
 ```text
 $ python setup.py develop
 ```
+This will add symbolic links in your local python distribution to this package, which will 
+update  when you pull new changes.
 
-This will add symbolic links in your python distro to this package, which will update 
-when you pull new changes.
-
-## Anatomy of multimodal datasets
+## Anatomy of multimodal video datasets
 At it's core, the multimodal datasets are HDF5 files, where the root group gathers all the different modalities for a 
-single multimodal stream. 
-Generally, the modalities can be anything, but specialized have been implemented for dealing with video, audio and 
+single multimodal stream (e.g. a movie). 
+Generally, the modalities can be anything, but specialized classes have been implemented for dealing with video, audio and 
 subtitles.
 A single multimodal stream (a root group of the HDF5 file) can have multiple modalities, for the movie case this
 corresponds to the stream of images, sound and subtitles. These modalities are groups of the stream. Each modality in 
@@ -43,11 +42,13 @@ Visually, the layout of general multimodal datasets looks like this:
 For video datasets, we can illustrate how the general dataset is used like this
 ![alt text](doc/images/multimodal_video.png "Illustration of multimodal video dataset organization")
 
- 
+A facet can also be the result of online processing of some other facets (such as resampling an audio facet or resizing 
+a video facet), but these are not represented in the HDF5 and are specific to the facet handler implementation.
+
 
 ## Usage
 
-###Creating multimodal datasets
+### Creating multimodal datasets
 The package contains a script to convert .mp4 files (using ffmpeg) and accompanying SubRip subtitles files into HDF5 
 datasets where all frames of the video-stream are saved as individual images (to enable precise slicing) and the audio 
 together with the audio and subtitles of the video.   
