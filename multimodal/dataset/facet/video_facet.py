@@ -86,7 +86,7 @@ class VideoFacet(FacetHandler):
 
         video_reader = imageio.get_reader(video_path, size=(width, height))
 
-        facetgroup = video_modality.create_group(name)
+        facetgroup = video_modality.require_group(name)
         facetgroup.attrs['FacetHandler'] = 'VideoFacet'
         facetgroup.attrs['rate'] = fps
 

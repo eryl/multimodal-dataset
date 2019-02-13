@@ -26,7 +26,7 @@ def extract_video(store, video_name, video_size):
 def make_dataset(video_name, subtitles_name=None, skip_video=False, skip_audio=False, video_size=(None, None)):
         print("Making video dataset using video {} and subtitles {}".format(video_name, subtitles_name))
         store_name = '{}.h5'.format(os.path.splitext(video_name)[0])
-        with h5py.File(store_name, 'a') as store:
+        with h5py.File(store_name, 'w') as store:
             if not skip_audio:
                 extract_audio(store, video_name)
             if subtitles_name is not None:

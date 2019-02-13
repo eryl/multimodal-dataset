@@ -15,7 +15,7 @@ class AudioFacet(FacetHandler):
     @classmethod
     def create_facet(cls, name, audio_modality, video_name, rate=16000):
         import ffmpeg
-        group = audio_modality.create_group(name)
+        group = audio_modality.require_group(name)
         out, _ = (ffmpeg
                   .input(video_name)
                   .output('-', format='s16le', acodec='pcm_s16le', ac=1, ar='16k')

@@ -24,6 +24,7 @@ def main():
     parser.add_argument('--target-height',
                         help="Scale video to have this height at most. Width will be rescaled to keep the aspect ratio",
                         type=int)
+    parser.add_argument('--overwrite', help="Overwrite the HDF5 file if it already exists", action='store_true')
     args = parser.parse_args()
 
     if '.csv' in args.input[0]:
@@ -47,14 +48,14 @@ def main():
         for video in videos:
             video_file = video['mp4']
             subtitles_files = video['srt']
-            pool.apply_async(make_dataset, (video_file, subtitles_files), dict(skip_video=args.skip_video, skip_audio=args.skip_audio, video_size=(args.target_width, args.target_height)))
+            pool.apply_async(make_dataset, (video_file, subtitles_files), dict(skip_video=args.skip_video, skip_audio=args.skip_audio, video_size=(args.target_width, args.target_height), overwrite=args.overwrite))
         pool.close()
         pool.join()
     else:
         for video in videos:
             video_file = video['mp4']
             subtitles_files = video['srt']
-            make_dataset(video_file, subtitles_files, skip_video=args.skip_video, skip_audio=args.skip_audio, video_size=(args.target_width, args.target_height))
+            make_dataset(video_file, subtitles_files, skip_video=args.skip_video, skip_audio=args.skip_audio, video_size=(args.target_width, args.target_height), overwrite=args.overwrite)
 
 
 if __name__ == '__main__':
