@@ -25,27 +25,6 @@ $ python setup.py develop
 This will add symbolic links in your local python distribution to this package, which will 
 update  when you pull new changes.
 
-## Anatomy of multimodal video datasets
-At it's core, the multimodal datasets are HDF5 files, where the root group gathers all the different modalities for a 
-single multimodal stream (e.g. a movie). 
-Generally, the modalities can be anything, but specialized classes have been implemented for dealing with video, audio and 
-subtitles.
-A single multimodal stream (a root group of the HDF5 file) can have multiple modalities, for the movie case this
-corresponds to the stream of images, sound and subtitles. These modalities are groups of the stream. Each modality in 
-turn can have different "facets". A facet is a way of viewing the same modality. In the case of movies, the image 
-modality could have different facets such as different camera angles of the same scene, the audio facets could 
-correspond to different language audio streams and subtitle facets could correspond to different closed captioned 
-languages.
-Visually, the layout of general multimodal datasets looks like this:
-![alt text](doc/images/multimodal_general.png "Illustration of general multimodal dataset organization")
-
-For video datasets, we can illustrate how the general dataset is used like this
-![alt text](doc/images/multimodal_video.png "Illustration of multimodal video dataset organization")
-
-A facet can also be the result of online processing of some other facets (such as resampling an audio facet or resizing 
-a video facet), but these are not represented in the HDF5 and are specific to the facet handler implementation.
-
-
 ## Usage
 
 ### Creating multimodal datasets
@@ -69,6 +48,7 @@ given a video-index produced by `bin/make_video_index.py`, all videos in the ind
 
 ### Using multimodal datasets
 The methods for using multimodal datasets are located in the multimodal package. 
+
 
 ## Demo
 A demo of how to use the datasets can be found in the `bin/extract_subtitle_audio.py` script. First you need a 
@@ -112,9 +92,32 @@ installing the package (see above), do the following:
    ```text
    $ mkdir -p sintel_waves && python ../bin/extract_subtitle_audio.py sintel-1024-surround.h5 sintel_waves
    ```
-   If you get a numpy float deprecation warning, everything is still allright.
+   If you get a numpy float deprecation warning, everything is still all right.
 
 The directory `data/sintel_waves` will now contain wav files named by the subtitle text containing the corresponding audio.
+
+
+## Anatomy of multimodal video datasets
+At it's core, the multimodal datasets are HDF5 files, where the root group gathers all the different modalities for a 
+single multimodal stream (e.g. a movie). 
+Generally, the modalities can be anything, but specialized classes have been implemented for dealing with video, audio and 
+subtitles.
+
+A single multimodal stream (a root group of the HDF5 file) can have multiple modalities, in movies for example these modalities are
+ video, sound and subtitles. These modalities are groups of the stream. Each modality in turn can have different "facets", ways in which the modality is represented. 
+
+In the case of movies, the image modality could have different facets such as different camera angles of the same scene, the audio facets could 
+correspond to different language audio streams and subtitle facets could correspond to different closed captioned languages.
+
+The layout of general multimodal datasets looks like this:
+![alt text](doc/images/multimodal_general.png "Illustration of general multimodal dataset organization")
+
+For video datasets, a concrete organization could look like this:
+![alt text](doc/images/multimodal_video.png "Illustration of multimodal video dataset organization")
+
+A facet can also be the result of online processing of some other facets (such as resampling an audio facet or resizing 
+a video facet), but these are not represented in the HDF5 and are specific to the facet handler implementation.
+
 
 ## Batched data
 The datasets doesn't support batched data yet, since this will 
