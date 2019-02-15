@@ -6,7 +6,7 @@ This package contains modules for handling multimodal data, with a focus on vide
 The package relies on the packages:
  - `h5py`
  - `numpy`
- - `imageio`.
+ - `imageio`
 
 If you use Anaconda, these are most likely installed by default, otherwise you have to install them.
 
@@ -15,7 +15,7 @@ You will also need a ffmpeg binary installed on your system.
 
 To run the demo (see below) you will also need the `requests` package, 
 alternatively you can download the Sintel files manually. 
-Step 3 in the demo also requires `scipy` to be installed.
+Step 3 in the demo also requires `scipy` to be installed. If you use Anaconda, these packages are installed by default.
 
 ## Installation
 In the base project directory, run:

@@ -9,11 +9,11 @@ def readme():
 setup(name='multimodal',
       version='0.1',
       description='Multimodal datasets',
-      url='http://ghetto.sics.se/ylipaa/multimodal',
+      url='https://github.com/eryl/multimodal-dataset',
       author='Erik Ylipää',
       author_email='erik.ylipaa@ri.se',
       license='MIT',
       packages=['multimodal'],
-      install_requires=[],
+      install_requires=['h5py', 'numpy', 'imageio'],
       dependency_links=[],
       zip_safe=False)
