@@ -45,3 +45,31 @@ class AudioFacet(FacetHandler):
                 start_frame, end_frame = frames_indices[i]
                 frames.append(self.frames[start_frame: end_frame])
             return frames
+
+
+class MuLawFacet(AudioFacet):
+    """
+    Dataset wrapper for audio facets which returns mu-law encoded sequences
+    """
+    def __init__(self, *args, u=255, k=256, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.u = u
+        self.logu = np.log(1 + self.u)
+        self.k = k
+
+    def get_frames(self, times):
+        """
+        Return the frames given by times as a numpy array
+        :return:
+        """
+        frames = super().get_frames(times).astype(np.float32)
+        frames += frames.min()
+        frames /= frames.max()
+        frames *= 2
+        frames -= 1
+        u_lawed = np.sign(frames) * np.log(1 + frames * np.abs(frames)) / self.logu
+        return ((u_lawed + 1) / 2 * self.u).astype(np.uint8)
+
+
+
+
