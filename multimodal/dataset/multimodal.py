@@ -37,6 +37,10 @@ class Modality(object):
     def get_facet(self, id=None):
         return self.facets.get(id, self.default_facet)
 
+    def get_samplerate(self, id=None):
+        facet = self.facets.get(id, self.default_facet)
+        return facet.get_samplerate()
+
 
 class MultiModalDataset(object):
     def __init__(self, hdf5_path, mode='r'):

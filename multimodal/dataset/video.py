@@ -88,7 +88,9 @@ class VideoDataset(MultiModalDataset):
         self.audio = self.modalities['audio'].get_facet()
         self.video = self.modalities['video'].get_facet()
 
-    def get_facet_wrapper(self, key_facet, stream_facets, max_duration=None, facet_options=None, rng=None):
+    def get_samplerate(self, stream):
+        return self.modalities[stream].get_samplerate()
+
         streams = [self.modalities[stream_facet].get_facet() for stream_facet in stream_facets]
         if key_facet == 'subtitles':
             return SubtitlesAndStreamsWrapper(subtitles=self.subtitles, streams=streams, max_duration=max_duration, rng=rng)

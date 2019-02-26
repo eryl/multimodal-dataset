@@ -9,3 +9,5 @@ class FacetHandler(object):
         else:
             return False
 
+    def get_samplerate(self):
+        raise NotImplementedError()

@@ -12,6 +12,9 @@ class VideoFacet(FacetHandler):
         self.frame_sizes = self.facetgroup['frame_sizes']
         self.fps = self.facetgroup.attrs['rate']
 
+    def get_samplerate(self):
+        return self.fps
+
     def get_frames(self, times):
         """
         Return the frames given by times as a numpy array

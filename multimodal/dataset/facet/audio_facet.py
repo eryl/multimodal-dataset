@@ -28,6 +28,9 @@ class AudioFacet(FacetHandler):
         group.attrs['FacetHandler'] = 'AudioFacet'
         return AudioFacet(group)
 
+    def get_samplerate(self):
+        return self.rate
+
     def get_frames(self, times):
         """
         Return the frames given by times as a numpy array
