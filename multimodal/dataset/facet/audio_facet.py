@@ -49,6 +49,9 @@ class AudioFacet(FacetHandler):
                 frames.append(self.frames[start_frame: end_frame])
             return frames
 
+    def get_all_frames(self):
+        return self.frames[:]
+
 
 class MuLawFacet(AudioFacet):
     """
