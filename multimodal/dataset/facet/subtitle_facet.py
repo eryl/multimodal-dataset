@@ -31,10 +31,14 @@ class SubtitleFacet(FacetHandler):
                 if tag == 'font':
                     if attrs[0][0] == 'color':
                         color = attrs[0][1].strip('#')
-                        self.color = (int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16))
+                        if self.color is None:
+                            self.color = []
+                        self.color.append((int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16)))
 
             def handle_data(self, data):
-                self.data = data
+                if self.data is None:
+                    self.data = []
+                self.data.append(data)
 
             def wipe(self):
                 self.data = None
@@ -46,34 +50,40 @@ class SubtitleFacet(FacetHandler):
 
         font_colors = dict()
         color_i = 0
-        colors = []
-        texts = []
+        all_colors = []
+        all_texts = []
         times = []
+
         for subtitle in subtitles:
             subtitle_parser.wipe()
             start = subtitle.start.total_seconds()
             end = subtitle.end.total_seconds()
             subtitle_parser.feed(subtitle.content)
-            text = subtitle_parser.data
-            color_tuple = subtitle_parser.color
-            if color_tuple is not None:
-                if not color_tuple in font_colors:
-                    font_colors[color_tuple] = color_i
-                    color_i += 1
-                color = font_colors[color_tuple]
-            else:
-                color = -1
+            texts = subtitle_parser.data
+            colors = subtitle_parser.color
+            color_ids = []
+            for text in texts:
+                if colors is not None:
+                    for color_tuple in colors:
+                        if not color_tuple in font_colors:
+                            font_colors[color_tuple] = color_i
+                            color_i += 1
+                        color_id = font_colors[color_tuple]
+                else:
+                    color_id = -1
+                color_ids.extend([color_id, len(text)])
+
+            all_texts.append(''.join(texts))
+            all_colors.extend(color_ids)
             times.append([start, end])
-            colors.append(color)
-            texts.append(text)
         subtitles_color_index = np.array([color for color, i in sorted(font_colors.items(), key=lambda x: x[1])],
                                          np.uint8)
         subtitles_facet = modality_group.require_group(name)
         subtitles_facet.create_dataset('color_index', data=subtitles_color_index)
-        subtitles_facet.create_dataset('colors', data=np.array(colors, dtype=np.int8))
-        subtitle_texts = subtitles_facet.create_dataset('texts', shape=(len(texts),),
+        subtitles_facet.create_dataset('colors', data=np.array(all_colors, dtype=np.int32))
+        subtitle_texts = subtitles_facet.create_dataset('texts', shape=(len(all_texts),),
                                                              dtype=h5py.special_dtype(vlen=str))
-        subtitle_texts[:] = texts
+        subtitle_texts[:] = all_texts
         subtitles_facet.create_dataset('times', data=np.array(times, dtype=np.float32))
         subtitles_facet.attrs['FacetHandler'] = 'SubtitleFacet'
         return SubtitleFacet(subtitles_facet)
