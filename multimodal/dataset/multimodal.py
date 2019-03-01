@@ -1,6 +1,7 @@
 import h5py
 from multimodal.dataset.facet import make_facet, is_facet
 
+
 class MultiModalDatasets(object):
     """
     Base class for dealing with multi-modal datasets. The datasets are contained in HDF5 files with a particular structure.
@@ -32,7 +33,7 @@ class Modality(object):
                 self.facets[name] = facet
 
     def get_facets(self):
-        raise NotImplementedError()
+        return self.facets.values()
 
     def get_facet(self, id=None):
         return self.facets.get(id, self.default_facet)
@@ -64,9 +65,21 @@ class MultiModalDataset(object):
     def close(self):
         self.store.close()
 
-    # def __iter__(self):
-    #     for i in range(len(self)):
-    #         yield self[i]
+    def get_facet(self, modality, facet_id=None):
+        return self.modalities[modality].get_facet(facet_id)
+
+    def get_all_facets(self, modalities):
+        """
+        Return all facets for the given modalities
+        :param modalities: A sequence of modalities.
+        :return: A list of lists of facets ordered as the modalities
+        """
+        return [self.modalities[modality].get_facets() for modality in modalities]
+
+
+
+
+
 
 
 
