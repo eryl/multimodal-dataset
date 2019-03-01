@@ -114,4 +114,37 @@ class SubtitleFacet(FacetHandler):
         else:
             raise TypeError("Invalid argument type.")
 
+    def get_times(self):
+        return self.times[:]
 
+    def get_times_filtered(self, filter):
+        """
+        Only return times for which the filter returns true
+        :param filter: A function accepting two arguments, the times and the text for each subtitle
+        :return: The times where the filter function returns true
+        """
+        filtered = []
+        for i in range(len(self.times)):
+            times = self.times[i]
+            text = self.texts[i]
+            if filter(times, text):
+                filtered.append(times)
+        return np.array(filtered)
+
+    def get_texts(self):
+        return self.texts[:]
+
+    def get_subrip_texts(self):
+        """
+        Returns the subtitles in SubRip format
+        :return: a string with the SubRip formatted subtitles
+        """
+        import multimodal.srt as srt
+        from datetime import timedelta
+        subtitle_entries = []
+        for i in range(len(self.times)):
+            start, end = self.times[i]
+            text = self.texts[i]
+            entry = srt.Subtitle(i+1, start=timedelta(seconds=float(start)), end=timedelta(seconds=float(end)), content=text)
+            subtitle_entries.append(entry)
+        return srt.compose(subtitle_entries)
