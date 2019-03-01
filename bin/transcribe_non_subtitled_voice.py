@@ -42,15 +42,15 @@ def find_non_subtitled_intervals(dataset_path, merge_duration_subtitles_ms=300, 
         sample_rate = dataset.get_samplerate('audio')
         audio_facet = dataset.get_facet('audio')
         subtitles = dataset.get_facet('subtitles')
-        subtitle_times_unfiltered = subtitles.get_times()
-        subtitle_times = subtitles.get_times_filtered(lambda time, text: not text.isupper())
+        subtitle_times = subtitles.get_times()
+        #subtitle_times = subtitles.get_times_filtered(lambda time, text: not text.isupper())
         merge_duration_frames_subtitles = merge_duration_subtitles_ms * sample_rate // 1000
         merge_duration_voiced_frames = merge_duration_voiced_ms * sample_rate // 1000
         trim_duration_frames = trim_duration_ms * sample_rate // 1000
 
         subtitled_intervals = merge_intervals((sample_rate*subtitle_times).astype(np.uint), merge_duration_frames_subtitles)
         voiced_intervals = audio_facet.get_time_intervals('voiced_segments')
-        voiced_non_subtitled_times = filter_overlapping_intervals(voiced_intervals/sample_rate, subtitled_intervals/sample_rate, filter_coverage=0.7)
+        voiced_non_subtitled_times = filter_overlapping_intervals(voiced_intervals, subtitled_intervals, filter_coverage=0.7)
 
         voiced_non_subtitled_times_merged = trim_intervals(merge_intervals(voiced_non_subtitled_times, merge_duration_voiced_frames), trim_duration_frames)
 
@@ -136,8 +136,6 @@ def transcribe(speech_segments, sample_rate, dataset_path, quota=300, language_c
         fp.write("#start\tend\tconfidence\ttranscript\n")
         for transcript in transcriptions:
             fp.write("{}\t{}\t{}\t{}\n".format(*transcript))
-
-
 
 
 def transcribe_worker(speech_segment_queue, transcription_queue, sample_rate, language_code, wait_time):

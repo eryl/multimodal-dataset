@@ -23,9 +23,7 @@ def filter_overlapping_intervals(to_be_filtered, filter_intervals, filter_covera
 
             if filter_start > end:
                 # The current filter is beyond the current interval to be filtered, we're done and the interval did not get filtered
-                filtered_intervals.append((start, end))
                 break
-
             elif start < filter_end:
                 # The filter overlaps the interval, accumulate the overlap
                 # it to the list
@@ -34,12 +32,13 @@ def filter_overlapping_intervals(to_be_filtered, filter_intervals, filter_covera
                            (max(0, start - filter_start) +  # This is how much the filter overlaps on the "left" side of the interval
                             max(0, filter_end - end)))      # This is how much the filter overlaps on the "right" side of the interval
                 overlap += filter_overlap
-                if end < filter_end:
-                    if overlap / interval_length < filter_coverage:
-                        filtered_intervals.append((start, end))
-                    break
-
+            if end < filter_end:
+                # This was the last filter which applied to the current interval, go on to the next interval but keep
+                # this filter
+                break
             current_filter_interval += 1
+        if overlap/interval_length < filter_coverage:
+            filtered_intervals.append((start, end))
         current_interval += 1
     return np.array(filtered_intervals)
 
