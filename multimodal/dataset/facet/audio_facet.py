@@ -31,21 +31,26 @@ class AudioFacet(FacetHandler):
     def get_samplerate(self):
         return self.rate
 
-    def get_frames(self, times):
+    def get_frames_by_seconds(self, times):
         """
-        Return the frames given by times as a numpy array
+        Return the frames given by times (given in fraction of seconds) as a numpy array
         :return:
         """
+        return self.get_frames(np.array(times*self.rate, dtype=np.uint))
+
+    def get_frames(self, times):
+        """
+        Return the frames given by times (exact frame indices) as a numpy array
+        :return:
+        """
+
         try:
             start, end = times
-            start_frame = int(start * self.rate)
-            end_frame = int(end * self.rate)
-            return self.frames[start_frame: end_frame]
+            return self.frames[start: end]
         except ValueError:
             frames = []
-            frames_indices = (times * self.rate).astype(np.uint)
-            for i in range(len(frames_indices)):
-                start_frame, end_frame = frames_indices[i]
+            for i in range(len(times)):
+                start_frame, end_frame = times[i]
                 frames.append(self.frames[start_frame: end_frame])
             return frames
 
