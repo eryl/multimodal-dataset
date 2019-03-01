@@ -28,6 +28,34 @@ class AudioFacet(FacetHandler):
         group.attrs['FacetHandler'] = 'AudioFacet'
         return AudioFacet(group)
 
+    def has_time_intervals(self, name):
+        return name in self.facetgroup
+
+    def add_time_intervals(self, name, times, overwrite=False):
+        """
+        Adds a dataset with times, useful for annotating an audio stream with e.g. voiced parts
+        :param name: The name of the times dataset
+        :param times: A numpy array of shape (n_pairs, 2)
+        """
+        if overwrite and name in self.facetgroup:
+            del self.facetgroup[name]
+        self.facetgroup.create_dataset(name, data=times, chunks=True, compression='gzip', shuffle=True)
+
+    def get_time_intervals(self, name):
+        return self.facetgroup[name][:]
+
+    def get_time_interval_frames(self, name):
+        """
+        Returns an iterator over the time intervals denoted by *name* and the frames corresponding to that interval
+        :param name:
+        :return:
+        """
+        times = self.facetgroup[name][:]
+        sample_rate = self.rate
+        for start, end in times:
+            frames = self.frames[start:end]
+            yield (start/sample_rate, end/sample_rate), frames
+
     def get_samplerate(self):
         return self.rate
 
