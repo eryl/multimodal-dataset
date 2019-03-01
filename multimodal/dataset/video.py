@@ -108,6 +108,17 @@ class VideoDataset(MultiModalDataset):
                                                     max_duration=max_duration,
                                                     rng=rng)
 
+    def get_time_interval_frames(self, time_interval_name, stream_facet_name, max_duration=None, rng=None):
+        """
+        :param time_interval_name:
+        :param stream_facet_name:
+        :param max_duration:
+        :param rng:
+        :return:
+        """
+        facet = self.modalities[stream_facet_name].get_facet()
+        return facet.get_time_interval_frames(time_interval_name)
+
     def setup_modalities(self):
         MultiModalDataset.setup_modalities(self)
         ## We add virtual modalities here
