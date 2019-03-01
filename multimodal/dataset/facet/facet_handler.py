@@ -11,3 +11,6 @@ class FacetHandler(object):
 
     def get_samplerate(self):
         raise NotImplementedError()
+
+    def group_name(self):
+        return self.facetgroup.name
