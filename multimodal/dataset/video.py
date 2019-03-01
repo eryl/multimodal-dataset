@@ -88,12 +88,6 @@ class SubtitlesComplementAndStreamsWrapper(SubtitlesAndStreamsWrapper):
 
 
 class VideoDataset(MultiModalDataset):
-    def __init__(self, *args, **kwargs):
-        super(VideoDataset, self).__init__(*args, **kwargs)
-        self.subtitles = self.modalities['subtitles'].get_facet()
-        self.audio = self.modalities['audio'].get_facet()
-        self.video = self.modalities['video'].get_facet()
-
     def get_samplerate(self, stream):
         return self.modalities[stream].get_samplerate()
 
@@ -101,13 +95,18 @@ class VideoDataset(MultiModalDataset):
         if isinstance(stream_facets, str):
             stream_facets = [stream_facets]
         streams = [self.modalities[stream_facet].get_facet() for stream_facet in stream_facets]
-        return SubtitlesAndStreamsWrapper(subtitles=self.subtitles, streams=streams, max_duration=max_duration, rng=rng)
+        subtitles = self.modalities['subtitles'].get_facet()
+        return SubtitlesAndStreamsWrapper(subtitles=subtitles, streams=streams, max_duration=max_duration, rng=rng)
 
     def get_subtitled_complement_streams(self, stream_facets, max_duration=None, rng=None):
         if isinstance(stream_facets, str):
             stream_facets = [stream_facets]
         streams = [self.modalities[stream_facet].get_facet() for stream_facet in stream_facets]
-        return SubtitlesComplementAndStreamsWrapper(subtitles=self.subtitles, streams=streams, max_duration=max_duration, rng=rng)
+        subtitles = self.modalities['subtitles'].get_facet()
+        return SubtitlesComplementAndStreamsWrapper(subtitles=subtitles,
+                                                    streams=streams,
+                                                    max_duration=max_duration,
+                                                    rng=rng)
 
     def setup_modalities(self):
         MultiModalDataset.setup_modalities(self)
