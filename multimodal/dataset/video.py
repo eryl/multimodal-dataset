@@ -125,11 +125,11 @@ class VideoDataset(MultiModalDataset):
         time_modality = TimeModality()
         self.modalities['time'] = time_modality
 
-    def get_streams(self, stream_facets, interval):
+    def get_streams(self, stream_facets):
         if isinstance(stream_facets, str):
             stream_facets = [stream_facets]
         streams = [self.modalities[stream_facet].get_facet() for stream_facet in stream_facets]
-
+        return [stream.get_all_frames() for stream in streams]
 
 
 class WrapperCollection(object):
