@@ -1,7 +1,9 @@
 import numpy as np
 from numbers import Integral
 from multimodal.dataset.multimodal import MultiModalDataset, MultiModalDatasets
-
+from multimodal.dataset.facet.subtitle_facet import SubtitleFacet
+from multimodal.dataset.facet.video_facet import VideoFacet
+from multimodal.dataset.facet.audio_facet import AudioFacet
 
 class TimeModality(object):
     def get_frames(self, times):
@@ -130,6 +132,27 @@ class VideoDataset(MultiModalDataset):
             stream_facets = [stream_facets]
         streams = [self.modalities[stream_facet].get_facet() for stream_facet in stream_facets]
         return [stream.get_all_frames() for stream in streams]
+
+    def add_multiple_subtitles(self, subtitles_files):
+        for subtitles_file in subtitles_files:
+            self.add_subtitles(subtitles_file)
+
+    def add_subtitles(self, subtitles_file, name=None):
+        subtitles_modality_group = self.store.require_group('subtitles')
+        if name is None:
+            import os.path
+            name = os.path.basename(subtitles_file)
+        subtitle_facet = SubtitleFacet.create_facet(name, subtitles_modality_group, subtitles_file)
+
+    def add_video(self, name, video_file, target_size):
+        video_modality_group = self.store.require_group('video')
+        video_facet = VideoFacet.create_facet(name, video_modality_group, video_file, target_size)
+
+    def add_audio(self, video_file, target_sample_rate=16000):
+        # TODO: Add all audio streams as facets
+        audio_modality_group = self.store.require_group('audio')
+        audio_facet = AudioFacet.create_facet('audio0', audio_modality_group, video_file, target_sample_rate)
+
 
 
 class WrapperCollection(object):
