@@ -107,18 +107,20 @@ def trim_intervals(intervals, trim_length):
     return intervals[interval_lengths > trim_length]
 
 
-def limit_length(videos, sample_rate):
-    frames_per_minute = sample_rate*60
-    for start, end, segment in videos:
-        if len(segment) >= frames_per_minute:
+def limit_length(intervals, length_limit):
+    for start, end in intervals:
+        interval_length = end - start
+        if interval_length >= length_limit:
             # We divide the samples as evenly as possible among the windows
-            num_sub_segments = int(np.ceil(len(segment)/frames_per_minute))
-            sub_segment_length = int(np.ceil(len(segment)/num_sub_segments))
-            for i in range(num_sub_segments):
-                sub_start = i*sub_segment_length
-                sub_end = sub_start + sub_segment_length
-                sub_segment = segment[sub_start:sub_end]
-                actual_sub_end = sub_start + len(sub_segment)  # The slice might have gotten fewer elements
-                yield (start + sub_start, start + actual_sub_end, sub_segment)
+            num_sub_intervals = int(np.ceil(interval_length/length_limit))
+            sub_interval_length = int(np.ceil(interval_length/num_sub_intervals))
+            # The first num_sub_intervals - 1 are the same length
+            for i in range(num_sub_intervals - 1):
+                sub_start = i*sub_interval_length
+                sub_end = sub_start + sub_interval_length
+                yield (start + sub_start, start + sub_end)
+            # We let the remaining sub-interval take care of uneven lengths
+            sub_start = (num_sub_intervals-1)*sub_interval_length
+            yield start + sub_start, end
         else:
-            yield start, end, segment
+            yield start, end
