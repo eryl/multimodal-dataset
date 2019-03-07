@@ -65,6 +65,14 @@ class MultiModalDataset(object):
     def close(self):
         self.store.close()
 
+    def remove_modality(self, modality):
+        """
+        Removes a modality from a dataset
+        :param modality: The name of the modality to remove
+        """
+        del self.store[modality]
+        del self.modalities[modality]
+
     def get_facet(self, modality, facet_id=None):
         return self.modalities[modality].get_facet(facet_id)
 
@@ -77,9 +85,7 @@ class MultiModalDataset(object):
         return [self.modalities[modality].get_facets() for modality in modalities]
 
 
-
-
-
-
-
-
+def remove_modality(dataset_path, modality):
+    with h5py.File(dataset_path, 'r+') as store:
+        if modality in store:
+            del store[modality]
