@@ -6,6 +6,7 @@ import os.path
 import argparse
 import numpy as np
 import scipy.io.wavfile as wavefile
+import glob
 
 from multimodal.dataset.add_vad_signal import add_voiced_segment_facet
 
@@ -19,16 +20,27 @@ def main():
                         choices=(0,1,2,3),
                         default=3)
     parser.add_argument('--n-processes', type=int, default=1)
+    parser.add_argument('--overwrite', action='store_true')
     args = parser.parse_args()
+
+    dataset_paths = []
+    for dataset_path in args.datasets:
+        if os.path.isdir(dataset_path):
+            datasets = glob.glob(os.path.join(dataset_path + '/**/' + '*.h5'), recursive=True)
+            dataset_paths.extend(datasets)
+        elif os.path.isfile(dataset_path):
+            dataset_paths.append(dataset_path)
+    print("Dataset paths: ", dataset_paths)
+
     if args.n_processes > 1:
         with multiprocessing.Pool(args.n_processes) as pool:
-            for dataset_path in args.datasets:
-                pool.apply_async(add_voiced_segment_facet, (dataset_path, args.mode))
+            for dataset_path in dataset_paths:
+                pool.apply_async(add_voiced_segment_facet, (dataset_path, args.mode), kwds={'overwrite': args.overwrite})
             pool.close()
             pool.join()
     else:
-        for dataset_path in args.datasets:
-            add_voiced_segment_facet(dataset_path, args.mode)
+        for dataset_path in dataset_paths:
+            add_voiced_segment_facet(dataset_path, args.mode, overwrite=args.overwrite)
 
 
 
