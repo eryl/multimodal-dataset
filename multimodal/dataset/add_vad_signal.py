@@ -65,7 +65,7 @@ def vad_slice_audio_signal(audio_frames, sample_rate, vad, frame_duration_ms=30,
                     voiced_frames.append(f)
 
                 # We calculate where these voiced frames start so we can calculate language offsets correctly
-                buffer_length_frames = len(ring_buffer)*frame_length
+                buffer_length_frames = (len(ring_buffer)-1)*frame_length
                 voiced_start_frame = start - buffer_length_frames
                 ring_buffer.clear()
         else:
