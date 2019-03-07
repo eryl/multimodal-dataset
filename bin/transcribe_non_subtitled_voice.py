@@ -15,7 +15,7 @@ import glob
 
 from multimodal.dataset.video import VideoDataset
 from multimodal.dataset.add_vad_signal import add_voiced_segment_facet
-from multimodal.intervals import merge_intervals, filter_overlapping_intervals, trim_intervals
+from multimodal.intervals import merge_intervals, filter_overlapping_intervals, trim_intervals, limit_length
 import json
 
 def main():
@@ -29,9 +29,10 @@ def main():
                         default=3)
     parser.add_argument('--language-code', help="What language code to use for transcription", default='en-US')
     parser.add_argument('--minimum-duration', help="A speech segment needs to be at least this long")
-    parser.add_argument('--quota', help="Maximum number of requests per minute", type=int, default=150)
+    parser.add_argument('--quota', help="Maximum number of requests per minute", type=int, default=250)
     parser.add_argument('--n-processes', type=int, default=1)
-    parser.add_argument('--n-transcription-processes', type=int, default=30)
+    parser.add_argument('--n-transcription-processes', type=int, default=60)
+    parser.add_argument('--overwrite-transcription', help="If this flag is set, ignore previous transcriptions", action='store_true')
     args = parser.parse_args()
 
     dataset_paths = []
@@ -43,13 +44,20 @@ def main():
             dataset_paths.append(dataset_path)
     print("Dataset paths: ", dataset_paths)
     if args.n_processes > 1:
-        transcribe_multiprocessing(dataset_paths, args.n_processes, n_transcription_processes=args.n_transcription_processes, quota=args.quota)
+        transcribe_multiprocessing(dataset_paths,
+                                   args.n_processes,
+                                   n_transcription_processes=args.n_transcription_processes,
+                                   quota=args.quota,
+                                   overwrite_transcription=args.overwrite_transcription)
     else:
-        transcribe_single_process(dataset_paths, n_transcription_processes=args.n_transcription_processes, quota=args.quota)
+        transcribe_single_process(dataset_paths,
+                                  n_transcription_processes=args.n_transcription_processes,
+                                  quota=args.quota,
+                                  overwrite_transcription=args.overwrite_transcription)
 
 
-def transcribe_single_process(dataset_paths, n_transcription_processes=30, quota=300, timeout=0.3):
-    speech_request_queue = multiprocessing.Queue(n_transcription_processes*4)
+def transcribe_single_process(dataset_paths, n_transcription_processes=30, quota=300, timeout=0.3, overwrite_transcription=False):
+    speech_request_queue = multiprocessing.Queue()
     transcription_results_queue = multiprocessing.Queue()
     wait_time = 60 * n_transcription_processes / quota
     do_quit = multiprocessing.Event()
@@ -62,13 +70,13 @@ def transcribe_single_process(dataset_paths, n_transcription_processes=30, quota
     for p in speech_transcriber_processes:
         p.start()
     for dataset_path in dataset_paths:
-        transcribe_dataset(dataset_path, pid, do_quit, speech_request_queue, transcription_results_queue, timeout=timeout)
+        transcribe_dataset(dataset_path, pid, do_quit, speech_request_queue, transcription_results_queue, timeout=timeout, overwrite_transcription=overwrite_transcription)
     do_quit.set()
     for p in speech_transcriber_processes:
         p.join()
 
 
-def transcribe_multiprocessing(dataset_paths, n_processes, n_transcription_processes=30, timeout=0.3, quota=300):
+def transcribe_multiprocessing(dataset_paths, n_processes, n_transcription_processes=30, timeout=0.3, quota=300, overwrite_transcription=False):
     dataset_queue = multiprocessing.Queue()  # This is a queue of all the datasets to transcribe
     for dataset_path in dataset_paths:
         dataset_queue.put(dataset_path)
@@ -84,15 +92,27 @@ def transcribe_multiprocessing(dataset_paths, n_processes, n_transcription_proce
     per_process_transcription_results_queues = [multiprocessing.Queue() for i in range(n_processes)]
     do_quit = multiprocessing.Event()
 
-    speech_requests_process = multiprocessing.Process(target=speech_transcription_multiplexer, args=(speech_request_queue, per_process_speech_request_queues, do_quit), kwargs=dict(timeout=timeout))
+    speech_requests_process = multiprocessing.Process(target=speech_transcription_multiplexer,
+                                                      args=(speech_request_queue,
+                                                            per_process_speech_request_queues,
+                                                            do_quit),
+                                                      kwargs=dict(timeout=timeout))
     speech_requests_process.start()
-    transcription_demultiplexer = multiprocessing.Process(target=transcription_results_demultiplexer, args=(transcription_results_queue, per_process_transcription_results_queues, do_quit), kwargs=dict(timeout=timeout))
+    transcription_demultiplexer = multiprocessing.Process(target=transcription_results_demultiplexer,
+                                                          args=(transcription_results_queue,
+                                                                per_process_transcription_results_queues,
+                                                                do_quit),
+                                                          kwargs=dict(timeout=timeout))
     transcription_demultiplexer.start()
 
     dataset_transcriber_processes = [multiprocessing.Process(target=dataset_transcriber_worker,
-                                                             args=(pid, dataset_queue, request_queue,
-                                                                   results_queue, do_quit),
-                                                             kwargs=dict(timeout=0.3))
+                                                             args=(pid,
+                                                                   dataset_queue,
+                                                                   request_queue,
+                                                                   results_queue,
+                                                                   do_quit),
+                                                             kwargs=dict(timeout=0.3,
+                                                                         overwrite_transcription=overwrite_transcription))
                                      for pid, (results_queue, request_queue)
                                      in enumerate(zip(per_process_transcription_results_queues,
                                                       per_process_speech_request_queues))]
@@ -157,65 +177,68 @@ def transcription_results_demultiplexer(transcription_results_queue, per_process
             pass
 
 
-def dataset_transcriber_worker(pid, dataset_queue, speech_queue, results_queue, do_quit, timeout=0.3):
+def dataset_transcriber_worker(pid, dataset_queue, speech_queue, results_queue, do_quit, timeout=0.3, overwrite_transcription=False):
 
     while not do_quit.is_set():
         try:
             dataset_path = dataset_queue.get(False)
-            transcribe_dataset(dataset_path, pid, do_quit, speech_queue, results_queue, timeout=timeout)
+            transcribe_dataset(dataset_path, pid, do_quit, speech_queue, results_queue, timeout=timeout, overwrite_transcription=overwrite_transcription)
         except queue.Empty:
             break
 
 
-def transcribe_dataset(dataset_path, pid, do_quit, speech_queue, results_queue, timeout=0.3):
+def transcribe_dataset(dataset_path, pid, do_quit, speech_queue, results_queue, timeout=0.3, overwrite_transcription=False):
     print("Transcribing dataset {}".format(dataset_path))
+    transcript_file = os.path.splitext(dataset_path)[0] + '.json'
+    if os.path.exists(transcript_file) and not overwrite_transcription:
+        print("Dataset {} already has transcription {}, skipping".format(dataset_path, transcript_file))
+        return
     transcripts = []
-    num_requests_made = 0
-    num_responses_received = 0
     sample_rate = get_samplerate(dataset_path)
     speech_segments = find_non_subtitled_intervals(dataset_path)
-    try:
-        speech_segment = next(speech_segments)
-        while not do_quit.is_set():
-            # Fill upp the request queue
-            while not do_quit.is_set():
-                try:
-                    start, end, audio = speech_segment
-                    speech_queue.put_nowait((pid, (start, end, audio, sample_rate)))
-                    num_requests_made += 1
-                    speech_segment = next(speech_segments)
-                except queue.Full:
-                    break
-            # Pump all responses
-            while not do_quit.is_set():
-                try:
-                    response = results_queue.get()
-                    transcripts.append(response)
-                    num_responses_received += 1
-                except queue.Empty:
-                    break
-    except StopIteration:
-        pass
-    # No more speech segments, now wait for all the requests to arrive
-    while num_requests_made > num_responses_received and not do_quit.is_set():
-        try:
-            response = results_queue.get(True, timeout)
-            transcripts.append(response)
-            num_responses_received += 1
-            print("<{}>: Segments processed: {:%}".format(pid, num_responses_received / num_requests_made))
-        except queue.Empty:
-            pass
-    filtered_transcripts = []
-    for pid, (start, end, result) in transcripts:
-        if result is not None:
-            confidence, transcript, words = result
-            filtered_transcripts.append(
-                dict(start=start, end=end, confidence=confidence, transcript=transcript, words=words))
-    filtered_transcripts.sort(key=lambda x: x['start'])
+    requested_segments = dict()
+    for (start, end, audio) in speech_segments:
+        message = (pid, (start, end, audio, sample_rate))
+        speech_queue.put(message)
+        requested_segments[(start,end)] = message
+        if do_quit.is_set():
+            return
 
-    transcript_file = os.path.splitext(dataset_path)[0] + '.json'
+    # Now we wait for all the results to arrive.
+    no_responses = False
+    num_requests_made = len(requested_segments)
+    if num_requests_made == 0:
+        return
+    while True:
+        try:
+            pid, (start, end, result) = results_queue.get(True, timeout)
+            no_responses = False
+            if result is not None:
+                confidence, transcript, words = result
+                transcripts.append(dict(start=start, end=end, confidence=confidence, transcript=transcript, words=words))
+            if (start, end) in requested_segments:
+                del requested_segments[(start, end)]
+
+            if len(requested_segments) == 0:
+                break
+            if do_quit.is_set():
+                return
+            print("<{}> Requests processed: {:%}".format(pid, 1 - len(requested_segments)/num_requests_made))
+        except queue.Empty:
+            ## The queue is empty, but we still have outstanding request. Wait some time and see if
+            # the queue has items, otherwise do a resend of outstanding requests
+            if no_responses:
+                # We ended up here two times in a row, likely something is wrong
+                pass
+            time.sleep(2)
+            no_responses = True
+
+
+    transcripts.sort(key=lambda x: x['start'])
+
+
     with open(transcript_file, 'w') as fp:
-        json.dump(filtered_transcripts, fp, sort_keys=True, indent=4)
+        json.dump(transcripts, fp, sort_keys=True, indent=4)
 
 
 def speech_transcriber_worker(speech_queue, transcription_results_queue, do_quit, wait_time, timeout=0.3, language_code='en-GB'):
@@ -232,6 +255,7 @@ def speech_transcriber_worker(speech_queue, transcription_results_queue, do_quit
                 enable_word_time_offsets=True)
 
             content = speech_segment.tobytes()
+
             audio = speech.types.RecognitionAudio(content=content)
             response = client.recognize(config=config, audio=audio)
             results = response.results
@@ -262,7 +286,7 @@ def get_samplerate(dataset_path):
         sample_rate = dataset.get_samplerate('audio')
         return sample_rate
 
-def find_non_subtitled_intervals(dataset_path, merge_duration_subtitles_ms=300, merge_duration_voiced_ms=500, trim_duration_ms=500):
+def find_non_subtitled_intervals(dataset_path, merge_duration_subtitles_ms=300, merge_duration_voiced_ms=500, trim_duration_ms=500, max_length_s=60):
     add_voiced_segment_facet(dataset_path, overwrite=True)
 
     with VideoDataset(dataset_path) as dataset:
@@ -274,16 +298,17 @@ def find_non_subtitled_intervals(dataset_path, merge_duration_subtitles_ms=300, 
         merge_duration_frames_subtitles = merge_duration_subtitles_ms * sample_rate // 1000
         merge_duration_voiced_frames = merge_duration_voiced_ms * sample_rate // 1000
         trim_duration_frames = trim_duration_ms * sample_rate // 1000
+        max_length_frames = max_length_s*sample_rate
 
         subtitled_intervals = merge_intervals((sample_rate*subtitle_times).astype(np.uint), merge_duration_frames_subtitles)
         voiced_intervals = audio_facet.get_time_intervals('voiced_segments')
         voiced_non_subtitled_times = filter_overlapping_intervals(voiced_intervals, subtitled_intervals, filter_coverage=0.7)
 
         voiced_non_subtitled_times_merged = trim_intervals(merge_intervals(voiced_non_subtitled_times, merge_duration_voiced_frames), trim_duration_frames)
+        voiced_non_subtitled_times_length_limited = list(limit_length(voiced_non_subtitled_times_merged, max_length_frames))
+        voiced_non_subtitled_audio = audio_facet.get_frames(voiced_non_subtitled_times_length_limited)
 
-        voiced_non_subtitled_audio = audio_facet.get_frames(voiced_non_subtitled_times_merged)
-
-        for (start, end), audio in zip(voiced_non_subtitled_times_merged, voiced_non_subtitled_audio):
+        for (start, end), audio in zip(voiced_non_subtitled_times_length_limited, voiced_non_subtitled_audio):
             yield start/sample_rate, end/sample_rate, audio
 
 
