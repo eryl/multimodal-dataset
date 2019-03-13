@@ -102,6 +102,33 @@ def merge_intervals(intervals, merge_duration):
     return np.array(merged_intervals)
 
 
+def merge_annotated_intervals(intervals, min_overlap=0):
+    """
+    Merges intervals which have extra data per interval. The intervals should be n-tuples, where n >= 2. The first
+    two elements are interpreted as the start and end of the interval. The remaining data will be gathered in
+    a list in the merged intervals
+    :return: A list of merged intervals as tuples with the same number of elements as the inputs, with the difference
+    that the merged data is collected in lists
+    """
+    if len(intervals) < 2:
+        return intervals
+    merged_intervals = []
+    previous_start, previous_end, *data = intervals[0]
+    data_values = [[x] for x in data]
+
+    for start, end, *data in intervals[1:]:
+        if start < previous_end + min_overlap:
+            previous_end = end
+            for i, x in enumerate(data):
+                data_values[i].append(x)
+        else:
+            merged_intervals.append([previous_start, previous_end, *data_values])
+            previous_start, previous_end = start, end
+            data_values = [[x] for x in data]
+    merged_intervals.append([previous_start, previous_end, *data_values])
+    return merged_intervals
+
+
 def trim_intervals(intervals, trim_length):
     interval_lengths = intervals[:,1] - intervals[:,0]
     return intervals[interval_lengths > trim_length]
