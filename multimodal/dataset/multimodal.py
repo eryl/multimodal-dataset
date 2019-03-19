@@ -36,10 +36,13 @@ class Modality(object):
         return self.facets.values()
 
     def get_facet(self, id=None):
-        return self.facets.get(id, self.default_facet)
+        if id is None:
+            return self.default_facet
+        else:
+            return self.facets[id]
 
     def get_samplerate(self, id=None):
-        facet = self.facets.get(id, self.default_facet)
+        facet = self.get_facet(id)
         return facet.get_samplerate()
 
 
