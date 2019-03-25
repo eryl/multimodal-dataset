@@ -15,6 +15,13 @@ class VideoFacet(FacetHandler):
     def get_samplerate(self):
         return self.fps
 
+    def get_length_s(self):
+        """
+        Return the length in seconds
+        :return:
+        """
+        return self.fps*len(self.frame_sizes)
+
     def get_frames_by_seconds(self, times):
         """
         Return the frames given by times (given in fraction of seconds) as a numpy array

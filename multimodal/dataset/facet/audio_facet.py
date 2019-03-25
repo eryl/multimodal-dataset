@@ -59,6 +59,14 @@ class AudioFacet(FacetHandler):
     def get_samplerate(self):
         return self.rate
 
+    def get_length_s(self):
+        """
+        Return the length in seconds
+        :return:
+        """
+        return self.rate*len(self.frames)
+
+
     def get_frames_by_seconds(self, times):
         """
         Return the frames given by times (given in fraction of seconds) as a numpy array
