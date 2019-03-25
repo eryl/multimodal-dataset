@@ -7,11 +7,11 @@ NULL_COLOR = (-1, -1, -1)
 class SubtitleFacet(FacetHandler):
     def __init__(self, *args, **kwargs):
         super(SubtitleFacet, self).__init__(*args, **kwargs)
-        self.strings = self.facetgroup['strings']
-        self.string_index = self.facetgroup['string_index']
-        self.times = self.facetgroup['times']
-        self.string_styles = self.facetgroup['string_styles']
-        self.string_colors = self.facetgroup['string_colors']
+        self.strings = self.facetgroup['strings'][:]
+        self.string_index = self.facetgroup['string_index'][:]
+        self.times = self.facetgroup['times'][:]
+        self.string_styles = self.facetgroup['string_styles'][:]
+        self.string_colors = self.facetgroup['string_colors'][:]
 
     @classmethod
     def create_facets(cls, subtitles_modality, subtitles_paths):
