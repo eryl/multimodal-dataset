@@ -150,7 +150,7 @@ class SubtitleFacet(FacetHandler):
             time = self.times[item]
             string_indices = self.string_index[item]
             strings = self.strings[string_indices]
-            return time, strings
+            return time, '\n'.join(strings)
         else:
             raise TypeError("Invalid argument type.")
 
