@@ -37,6 +37,31 @@ class SubtitlesAndStreamsWrapper(object):
                 long_indices = times[:,1] - times[:,0] > self.max_duration
                 segment_start = self.rng.random_sample(times.shape[0]) * (segment_lengths - self.max_duration)
                 times[long_indices] = np.hstack([segment_start, segment_start+self.max_duration])
+            frames = [stream.get_frames_by_seconds(times) for stream in self.streams]
+            return zip(text, *frames)
+        elif isinstance(item, Integral):
+            times, text = subtitles
+            if self.max_duration is not None:
+                segment_length = times[1] - times[0]
+                if segment_length > self.max_duration:
+                    start_time = self.rng.random_sample() * (segment_length - self.max_duration)
+                    times[0] = start_time
+                    times[1] = start_time + self.max_duration
+            frames = [stream.get_frames_by_seconds(times) for stream in self.streams]
+            return (text, frames)
+        else:
+            raise TypeError("Invalid argument type. {}".format(type(item)))
+
+    def __getitem__(self, item):
+        subtitles = self.subtitles[item]
+        if isinstance(item, slice):
+            times, text = zip(*subtitles)
+            if self.max_duration is not None:
+                # We should randomly sample shorter time intervals for the times which are to long
+                segment_lengths = times[:,1] - times[:,0]
+                long_indices = times[:,1] - times[:,0] > self.max_duration
+                segment_start = self.rng.random_sample(times.shape[0]) * (segment_lengths - self.max_duration)
+                times[long_indices] = np.hstack([segment_start, segment_start+self.max_duration])
             frames = [stream.get_frames_by_second(times) for stream in self.streams]
             return zip(text, *frames)
         elif isinstance(item, Integral):
