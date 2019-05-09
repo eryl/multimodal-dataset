@@ -6,6 +6,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('directory')
     parser.add_argument('output')
+    parser.add_argument('--facet')
     parser.add_argument('--subrip', help="If this flag is set, write to subrip format, otherwise just output the text without time information", action='store_true')
     args = parser.parse_args()
 
@@ -13,7 +14,7 @@ def main():
     with open(args.output, 'w') as output_fp:
         for dataset_path in h5_files:
             with VideoDataset(dataset_path) as dataset:
-                subtitles_facet = dataset.get_facet('subtitles')
+                subtitles_facet = dataset.get_facet('subtitles', args.facet)
                 if args.subrip:
                     output_fp.write(subtitles_facet.get_subrip_texts())
                 else:
