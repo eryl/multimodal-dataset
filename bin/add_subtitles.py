@@ -68,7 +68,11 @@ def main():
     all_collections.append(collected_pairs)
 
     for collected_pairs in all_collections:
-        [dataset_path] = [path for path, type in collected_pairs if type == 'dataset']
+        try:
+            [dataset_path] = [path for path, type in collected_pairs if type == 'dataset']
+        except ValueError:
+            print("Missing datasets for {}".format(collected_pairs))
+            continue
         subtitles = [path for path, type in collected_pairs if type == 'subtitle']
         if len(subtitles) > 0:
             dataset_paths.remove(dataset_path)
